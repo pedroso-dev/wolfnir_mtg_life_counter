@@ -32,10 +32,7 @@ class _MatchScreenState extends State<MatchScreen> {
         actions: [
           TextButton(
             onPressed: () {
-              // Em vez de fechar só o alerta com .pop(), limpamos TUDO (Alerta e Modais)
               Navigator.of(context).popUntil((route) => route.isFirst);
-
-              // E então reiniciamos a partida
               matchCubit.resetMatch();
             },
             child: const Text(AppStrings.resetMatch),
@@ -51,7 +48,7 @@ class _MatchScreenState extends State<MatchScreen> {
       backgroundColor: Colors.transparent,
       builder: (context) => const DiceModal(),
     );
-  } // <-- A chave que faltava para fechar o modal estava aqui!
+  }
 
   Widget _buildSetupScreen(BuildContext context) {
     return Center(
@@ -116,6 +113,8 @@ class _MatchScreenState extends State<MatchScreen> {
                   player: p2,
                   backgroundColor: Colors.red.shade800,
                   inverted: true,
+                  showCommanderDamage:
+                      state.format?.hasCommanderDamage ?? false,
                   onLifeChanged: (amount) =>
                       context.read<MatchCubit>().updateLife('player_2', amount),
                   onPoisonChanged: (amount) => context
@@ -139,9 +138,22 @@ class _MatchScreenState extends State<MatchScreen> {
                   children: [
                     IconButton(
                       icon: const Icon(
+                        Icons.style,
+                        color: Colors.white,
+                        size: 30,
+                      ),
+                      onPressed: () {
+                        Navigator.of(
+                          context,
+                        ).popUntil((route) => route.isFirst);
+                        context.read<MatchCubit>().changeFormat();
+                      },
+                    ),
+                    IconButton(
+                      icon: const Icon(
                         Icons.casino,
                         color: Colors.white,
-                        size: 32,
+                        size: 30,
                       ),
                       onPressed: () => _showDiceModal(context),
                     ),
@@ -149,7 +161,7 @@ class _MatchScreenState extends State<MatchScreen> {
                       icon: const Icon(
                         Icons.refresh,
                         color: Colors.white,
-                        size: 32,
+                        size: 30,
                       ),
                       onPressed: () {
                         Navigator.of(
@@ -167,6 +179,8 @@ class _MatchScreenState extends State<MatchScreen> {
                 child: PlayerBoard(
                   player: p1,
                   backgroundColor: Colors.blue.shade800,
+                  showCommanderDamage:
+                      state.format?.hasCommanderDamage ?? false,
                   onLifeChanged: (amount) =>
                       context.read<MatchCubit>().updateLife('player_1', amount),
                   onPoisonChanged: (amount) => context

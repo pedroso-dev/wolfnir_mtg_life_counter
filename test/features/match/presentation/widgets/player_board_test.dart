@@ -1,9 +1,29 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:mocktail/mocktail.dart';
 import 'package:wolfnir_mtg_life_counter/features/match/domain/entities/player.dart';
+import 'package:wolfnir_mtg_life_counter/features/match/domain/enums/game_format.dart';
+import 'package:wolfnir_mtg_life_counter/features/match/presentation/cubit/match_cubit.dart';
+import 'package:wolfnir_mtg_life_counter/features/match/presentation/cubit/match_state.dart';
 import 'package:wolfnir_mtg_life_counter/features/match/presentation/widgets/player_board.dart';
 
+class MockMatchCubit extends Mock implements MatchCubit {}
+
 void main() {
+  late MockMatchCubit mockCubit;
+
+  setUp(() {
+    mockCubit = MockMatchCubit();
+    when(() => mockCubit.state).thenReturn(
+      const MatchState(
+        players: {},
+        status: MatchStatus.playing,
+        format: GameFormat.commander,
+      ),
+    );
+  });
+
   const tPlayer = Player(
     id: 'player_1',
     life: 40,
@@ -18,12 +38,16 @@ void main() {
   }) {
     return MaterialApp(
       home: Scaffold(
-        body: PlayerBoard(
-          player: tPlayer,
-          backgroundColor: Colors.blue,
-          onLifeChanged: onLifeChanged,
-          onPoisonChanged: onPoisonChanged,
-          onCommanderDamageChanged: onCommanderDamageChanged,
+        body: BlocProvider<MatchCubit>.value(
+          value: mockCubit,
+          child: PlayerBoard(
+            player: tPlayer,
+            backgroundColor: Colors.blue,
+            showCommanderDamage: true,
+            onLifeChanged: onLifeChanged,
+            onPoisonChanged: onPoisonChanged,
+            onCommanderDamageChanged: onCommanderDamageChanged,
+          ),
         ),
       ),
     );
@@ -41,9 +65,7 @@ void main() {
         ),
       );
 
-      // Verifica se a vida 40 está na tela
       expect(find.text('40'), findsOneWidget);
-      // Verifica se o dano de comandante (5) e veneno (2) aparecem nos badges
       expect(find.text('5'), findsOneWidget);
       expect(find.text('2'), findsOneWidget);
     });
@@ -61,23 +83,17 @@ void main() {
           ),
         );
 
-        // Os GestureDetectors estão divididos na tela.
-        // Pegamos o primeiro (metade de cima) e o segundo (metade de baixo).
         final gestureDetectors = find.byType(GestureDetector);
 
-        // 1. Testa clique simples para somar 1 de vida (Metade de cima)
         await tester.tap(gestureDetectors.first);
         expect(registeredAmount, equals(1));
 
-        // 2. Testa clique longo para somar 10 de vida (Metade de cima)
         await tester.longPress(gestureDetectors.first);
         expect(registeredAmount, equals(10));
 
-        // 3. Testa clique simples para subtrair 1 de vida (Metade de baixo)
         await tester.tap(gestureDetectors.at(1));
         expect(registeredAmount, equals(-1));
 
-        // 4. Testa clique longo para subtrair 10 de vida (Metade de baixo)
         await tester.longPress(gestureDetectors.at(1));
         expect(registeredAmount, equals(-10));
       },

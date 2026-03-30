@@ -67,6 +67,7 @@ class MatchCubit extends Cubit<MatchState> {
         player: player,
         opponentId: opponentId,
         amount: amount,
+        format: state.format,
       );
       _emitUpdatedPlayer(updatedPlayer);
     }

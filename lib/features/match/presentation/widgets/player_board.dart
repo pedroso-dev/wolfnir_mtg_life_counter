@@ -5,11 +5,13 @@ import 'counter_modal.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../cubit/match_cubit.dart';
 import '../cubit/match_state.dart';
+import '../../domain/enums/game_format.dart';
 
 class PlayerBoard extends StatelessWidget {
   final Player player;
   final Color backgroundColor;
   final bool inverted;
+  final bool showCommanderDamage;
   final Function(int) onLifeChanged;
   final Function(int) onPoisonChanged;
   // Para a v1 (1v1), vamos simplificar e assumir que o dano vem sempre do único oponente
@@ -19,6 +21,7 @@ class PlayerBoard extends StatelessWidget {
     super.key,
     required this.player,
     required this.backgroundColor,
+    required this.showCommanderDamage,
     required this.onLifeChanged,
     required this.onPoisonChanged,
     required this.onCommanderDamageChanged,
@@ -26,7 +29,6 @@ class PlayerBoard extends StatelessWidget {
   });
 
   void _showCounterModal(BuildContext context, String title, bool isPoison) {
-    // 1. Pegamos a referência exata do Cubit ANTES de abrir o modal
     final matchCubit = context.read<MatchCubit>();
 
     showModalBottomSheet(
@@ -34,7 +36,6 @@ class PlayerBoard extends StatelessWidget {
       backgroundColor: Colors.transparent,
       isScrollControlled: true,
       builder: (bottomSheetContext) {
-        // 2. Injetamos o Cubit existente na nova camada do Modal usando .value
         return BlocProvider.value(
           value: matchCubit,
           child: BlocBuilder<MatchCubit, MatchState>(
@@ -109,7 +110,6 @@ class PlayerBoard extends StatelessWidget {
                 ),
               ),
             ),
-            // Posicionamos os botões extras na parte inferior (perto do centro da mesa)
             Positioned(
               bottom: 16,
               left: 0,
@@ -117,24 +117,25 @@ class PlayerBoard extends StatelessWidget {
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  _ClickableBadge(
-                    icon: Icons.shield,
-                    value: player.commanderDamageTaken.values.fold(
-                      0,
-                      (sum, val) => sum + val,
+                  if (showCommanderDamage)
+                    _ClickableBadge(
+                      icon: Icons.shield,
+                      value: player.commanderDamageTaken.values.fold(
+                        0,
+                        (sum, val) => sum + val,
+                      ),
+                      onTap: () => _showCounterModal(
+                        context,
+                        AppStrings.commanderDamage,
+                        false,
+                      ),
                     ),
-                    // Passamos apenas: context, Título, isPoison (false)
-                    onTap: () => _showCounterModal(
-                      context,
-                      AppStrings.commanderDamage,
-                      false,
-                    ),
-                  ),
-                  const SizedBox(width: 16),
+
+                  if (showCommanderDamage) const SizedBox(width: 16),
+
                   _ClickableBadge(
                     icon: Icons.science,
                     value: player.poisonCounters,
-                    // Passamos apenas: context, Título, isPoison (true)
                     onTap: () =>
                         _showCounterModal(context, AppStrings.poison, true),
                   ),
@@ -166,7 +167,7 @@ class _ClickableBadge extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
         decoration: BoxDecoration(
-          color: Colors.black.withOpacity(0.6),
+          color: Colors.black.withValues(alpha: 0.6),
           borderRadius: BorderRadius.circular(30),
           border: Border.all(color: Colors.white24),
         ),

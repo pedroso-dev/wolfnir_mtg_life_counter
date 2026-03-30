@@ -14,6 +14,10 @@ extension GameFormatExtension on GameFormat {
     }
   }
 
+  bool get hasCommanderDamage {
+    return this == GameFormat.commander;
+  }
+
   String get displayName {
     switch (this) {
       case GameFormat.commander:
