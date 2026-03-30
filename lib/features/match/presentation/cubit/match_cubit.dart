@@ -20,14 +20,17 @@ class MatchCubit extends Cubit<MatchState> {
        _updateCommanderDamage = updateCommanderDamage,
        super(const MatchState(players: {}));
 
-  void startMatch(GameFormat format) {
-    // For the MVP, we start a standard 1v1 Commander match
-    final p1 = Player(id: 'player_1', life: format.startingLife);
-    final p2 = Player(id: 'player_2', life: format.startingLife);
+  void startMatch({required GameFormat format, required int playerCount}) {
+    final newPlayers = <String, Player>{};
+
+    for (int i = 1; i <= playerCount; i++) {
+      final id = 'player_$i';
+      newPlayers[id] = Player(id: id, life: format.startingLife);
+    }
 
     emit(
       MatchState(
-        players: {'player_1': p1, 'player_2': p2},
+        players: newPlayers,
         status: MatchStatus.playing,
         format: format,
       ),
@@ -74,8 +77,8 @@ class MatchCubit extends Cubit<MatchState> {
   }
 
   void resetMatch() {
-    if (state.format != null) {
-      startMatch(state.format!);
+    if (state.format != null && state.players.isNotEmpty) {
+      startMatch(format: state.format!, playerCount: state.players.length);
     }
   }
 

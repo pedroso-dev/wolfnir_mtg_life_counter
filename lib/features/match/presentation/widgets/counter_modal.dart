@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import '../../../../core/constants/strings.dart';
 
 class CounterModal extends StatelessWidget {
   final String title;
@@ -22,7 +21,7 @@ class CounterModal extends StatelessWidget {
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
       child: Column(
-        mainAxisSize: MainAxisSize.min, // Ocupa apenas o espaço necessário
+        mainAxisSize: MainAxisSize.min,
         children: [
           Text(
             title,

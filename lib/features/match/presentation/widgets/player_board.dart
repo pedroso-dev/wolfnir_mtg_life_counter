@@ -5,7 +5,7 @@ import 'counter_modal.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../cubit/match_cubit.dart';
 import '../cubit/match_state.dart';
-import '../../domain/enums/game_format.dart';
+import 'commander_damage_modal.dart';
 
 class PlayerBoard extends StatelessWidget {
   final Player player;
@@ -14,8 +14,6 @@ class PlayerBoard extends StatelessWidget {
   final bool showCommanderDamage;
   final Function(int) onLifeChanged;
   final Function(int) onPoisonChanged;
-  // Para a v1 (1v1), vamos simplificar e assumir que o dano vem sempre do único oponente
-  final Function(int) onCommanderDamageChanged;
 
   const PlayerBoard({
     super.key,
@@ -24,50 +22,49 @@ class PlayerBoard extends StatelessWidget {
     required this.showCommanderDamage,
     required this.onLifeChanged,
     required this.onPoisonChanged,
-    required this.onCommanderDamageChanged,
     this.inverted = false,
   });
 
-  void _showCounterModal(BuildContext context, String title, bool isPoison) {
+  void _showPoisonModal(BuildContext context) {
     final matchCubit = context.read<MatchCubit>();
-
     showModalBottomSheet(
       context: context,
       backgroundColor: Colors.transparent,
       isScrollControlled: true,
-      builder: (bottomSheetContext) {
-        return BlocProvider.value(
-          value: matchCubit,
-          child: BlocBuilder<MatchCubit, MatchState>(
-            builder: (context, state) {
-              final currentPlayer = state.players[player.id];
-              if (currentPlayer == null) return const SizedBox.shrink();
+      builder: (_) => BlocProvider.value(
+        value: matchCubit,
+        child: BlocBuilder<MatchCubit, MatchState>(
+          builder: (context, state) {
+            final currentPlayer = state.players[player.id];
+            if (currentPlayer == null) return const SizedBox.shrink();
 
-              final currentValue = isPoison
-                  ? currentPlayer.poisonCounters
-                  : currentPlayer.commanderDamageTaken.values.fold(
-                      0,
-                      (sum, val) => sum + val,
-                    );
+            return RotatedBox(
+              quarterTurns: inverted ? 2 : 0,
+              child: CounterModal(
+                title: AppStrings.poison,
+                currentValue: currentPlayer.poisonCounters,
+                onValueChanged: (amount) => onPoisonChanged(amount),
+              ),
+            );
+          },
+        ),
+      ),
+    );
+  }
 
-              return RotatedBox(
-                quarterTurns: inverted ? 2 : 0,
-                child: CounterModal(
-                  title: title,
-                  currentValue: currentValue,
-                  onValueChanged: (amount) {
-                    if (isPoison) {
-                      onPoisonChanged(amount);
-                    } else {
-                      onCommanderDamageChanged(amount);
-                    }
-                  },
-                ),
-              );
-            },
-          ),
-        );
-      },
+  void _showCommanderModal(BuildContext context) {
+    final matchCubit = context.read<MatchCubit>();
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      isScrollControlled: true,
+      builder: (_) => BlocProvider.value(
+        value: matchCubit,
+        child: RotatedBox(
+          quarterTurns: inverted ? 2 : 0,
+          child: CommanderDamageModal(targetPlayerId: player.id),
+        ),
+      ),
     );
   }
 
@@ -124,11 +121,7 @@ class PlayerBoard extends StatelessWidget {
                         0,
                         (sum, val) => sum + val,
                       ),
-                      onTap: () => _showCounterModal(
-                        context,
-                        AppStrings.commanderDamage,
-                        false,
-                      ),
+                      onTap: () => _showCommanderModal(context),
                     ),
 
                   if (showCommanderDamage) const SizedBox(width: 16),
@@ -136,8 +129,7 @@ class PlayerBoard extends StatelessWidget {
                   _ClickableBadge(
                     icon: Icons.science,
                     value: player.poisonCounters,
-                    onTap: () =>
-                        _showCounterModal(context, AppStrings.poison, true),
+                    onTap: () => _showPoisonModal(context),
                   ),
                 ],
               ),

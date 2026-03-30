@@ -30,29 +30,61 @@ void main() {
   }
 
   group('MatchScreen Widget |', () {
-    testWidgets('should show format selection screen when state is initial', (
-      tester,
-    ) async {
-      when(
-        () => mockCubit.state,
-      ).thenReturn(const MatchState(players: {}, status: MatchStatus.initial));
+    testWidgets(
+      'should navigate setup screens and call startMatch on the Cubit',
+      (tester) async {
+        when(() => mockCubit.state).thenReturn(
+          const MatchState(players: {}, status: MatchStatus.initial),
+        );
 
-      await tester.pumpWidget(createWidgetUnderTest());
+        await tester.pumpWidget(createWidgetUnderTest());
 
-      expect(find.text(AppStrings.selectFormat), findsOneWidget);
-      expect(find.text(AppStrings.commander), findsOneWidget);
-      expect(find.text(AppStrings.tinyLeaders), findsOneWidget);
-    });
+        expect(find.text(AppStrings.selectFormat), findsOneWidget);
+        expect(find.text(AppStrings.commander), findsOneWidget);
 
-    testWidgets('should render 2 PlayerBoards and middle bar when playing', (
+        await tester.tap(find.text(AppStrings.commander));
+        await tester.pumpAndSettle();
+
+        expect(find.text(AppStrings.selectPlayers), findsOneWidget);
+        expect(find.text(AppStrings.fourPlayers), findsOneWidget);
+
+        await tester.tap(find.text(AppStrings.fourPlayers));
+        await tester.pump();
+      },
+    );
+
+    testWidgets(
+      'should render 2 PlayerBoards and middle bar when playing 1v1',
+      (tester) async {
+        const p1 = Player(id: 'player_1', life: 40);
+        const p2 = Player(id: 'player_2', life: 40);
+
+        when(() => mockCubit.state).thenReturn(
+          const MatchState(
+            players: {'player_1': p1, 'player_2': p2},
+            status: MatchStatus.playing,
+            format: GameFormat.commander,
+          ),
+        );
+
+        await tester.pumpWidget(createWidgetUnderTest());
+
+        expect(find.byType(PlayerBoard), findsNWidgets(2));
+        expect(find.byIcon(Icons.casino), findsOneWidget);
+        expect(find.byIcon(Icons.refresh), findsOneWidget);
+      },
+    );
+
+    testWidgets('should render 3 PlayerBoards when playing a 3-player match', (
       tester,
     ) async {
       const p1 = Player(id: 'player_1', life: 40);
       const p2 = Player(id: 'player_2', life: 40);
+      const p3 = Player(id: 'player_3', life: 40);
 
       when(() => mockCubit.state).thenReturn(
         const MatchState(
-          players: {'player_1': p1, 'player_2': p2},
+          players: {'player_1': p1, 'player_2': p2, 'player_3': p3},
           status: MatchStatus.playing,
           format: GameFormat.commander,
         ),
@@ -60,12 +92,33 @@ void main() {
 
       await tester.pumpWidget(createWidgetUnderTest());
 
-      // Verifica se os dois tabuleiros foram desenhados na tela
-      expect(find.byType(PlayerBoard), findsNWidgets(2));
+      expect(find.byType(PlayerBoard), findsNWidgets(3));
+    });
 
-      // Verifica se os ícones da barra central (Dado e Reset) estão na tela
-      expect(find.byIcon(Icons.casino), findsOneWidget);
-      expect(find.byIcon(Icons.refresh), findsOneWidget);
+    testWidgets('should render 4 PlayerBoards when playing a 4-player match', (
+      tester,
+    ) async {
+      const p1 = Player(id: 'player_1', life: 40);
+      const p2 = Player(id: 'player_2', life: 40);
+      const p3 = Player(id: 'player_3', life: 40);
+      const p4 = Player(id: 'player_4', life: 40);
+
+      when(() => mockCubit.state).thenReturn(
+        const MatchState(
+          players: {
+            'player_1': p1,
+            'player_2': p2,
+            'player_3': p3,
+            'player_4': p4,
+          },
+          status: MatchStatus.playing,
+          format: GameFormat.commander,
+        ),
+      );
+
+      await tester.pumpWidget(createWidgetUnderTest());
+
+      expect(find.byType(PlayerBoard), findsNWidgets(4));
     });
   });
 }

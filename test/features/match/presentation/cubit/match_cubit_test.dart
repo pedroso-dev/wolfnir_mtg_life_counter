@@ -56,12 +56,32 @@ void main() {
     });
 
     blocTest<MatchCubit, MatchState>(
-      'should emit playing status, set format and initialize players when startMatch is called',
+      'should emit playing status and initialize 2 players when startMatch is called',
       build: () => cubit,
-      act: (cubit) => cubit.startMatch(GameFormat.commander),
+      act: (cubit) =>
+          cubit.startMatch(format: GameFormat.commander, playerCount: 2),
       expect: () => [
         const MatchState(
           players: {'player_1': player1, 'player_2': player2},
+          status: MatchStatus.playing,
+          format: GameFormat.commander,
+        ),
+      ],
+    );
+
+    blocTest<MatchCubit, MatchState>(
+      'should initialize 4 players correctly for a multiplayer table',
+      build: () => cubit,
+      act: (cubit) =>
+          cubit.startMatch(format: GameFormat.commander, playerCount: 4),
+      expect: () => [
+        const MatchState(
+          players: {
+            'player_1': Player(id: 'player_1', life: 40),
+            'player_2': Player(id: 'player_2', life: 40),
+            'player_3': Player(id: 'player_3', life: 40),
+            'player_4': Player(id: 'player_4', life: 40),
+          },
           status: MatchStatus.playing,
           format: GameFormat.commander,
         ),

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:wolfnir_mtg_life_counter/features/match/domain/entities/player.dart';
 import '../../../../core/constants/strings.dart';
 import '../cubit/match_cubit.dart';
 import '../cubit/match_state.dart';
@@ -15,6 +16,9 @@ class MatchScreen extends StatefulWidget {
 }
 
 class _MatchScreenState extends State<MatchScreen> {
+  // Variável para guardar o formato enquanto o usuário escolhe a quantidade de jogadores
+  GameFormat? _pendingFormat;
+
   @override
   void initState() {
     super.initState();
@@ -50,13 +54,56 @@ class _MatchScreenState extends State<MatchScreen> {
     );
   }
 
+  // ... (mantenha os imports, initState, _showWinnerDialog e _showDiceModal)
+
   Widget _buildSetupScreen(BuildContext context) {
+    // PASSO 1: Escolher o Formato
+    if (_pendingFormat == null) {
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Text(
+              AppStrings.selectFormat,
+              style: TextStyle(
+                fontSize: 32,
+                fontWeight: FontWeight.bold,
+                color: Colors.white,
+              ),
+            ),
+            const SizedBox(height: 48),
+            _FormatButton(
+              title: GameFormat.commander.displayName,
+              color: Colors.purple.shade700,
+              onPressed: () =>
+                  setState(() => _pendingFormat = GameFormat.commander),
+            ),
+            const SizedBox(height: 16),
+            _FormatButton(
+              title: GameFormat.tinyLeaders.displayName,
+              color: Colors.orange.shade700,
+              onPressed: () =>
+                  setState(() => _pendingFormat = GameFormat.tinyLeaders),
+            ),
+            const SizedBox(height: 16),
+            _FormatButton(
+              title: GameFormat.duelCommander.displayName,
+              color: Colors.teal.shade700,
+              onPressed: () =>
+                  setState(() => _pendingFormat = GameFormat.duelCommander),
+            ),
+          ],
+        ),
+      );
+    }
+
+    // PASSO 2: Escolher Quantos Jogadores
     return Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           const Text(
-            AppStrings.selectFormat,
+            AppStrings.selectPlayers,
             style: TextStyle(
               fontSize: 32,
               fontWeight: FontWeight.bold,
@@ -65,18 +112,88 @@ class _MatchScreenState extends State<MatchScreen> {
           ),
           const SizedBox(height: 48),
           _FormatButton(
-            format: GameFormat.commander,
-            color: Colors.purple.shade700,
+            title: AppStrings.twoPlayers,
+            color: Colors.blueGrey.shade700,
+            onPressed: () => context.read<MatchCubit>().startMatch(
+              format: _pendingFormat!,
+              playerCount: 2,
+            ),
           ),
           const SizedBox(height: 16),
           _FormatButton(
-            format: GameFormat.tinyLeaders,
-            color: Colors.orange.shade700,
+            title: AppStrings.threePlayers,
+            color: Colors.blueGrey.shade700,
+            onPressed: () => context.read<MatchCubit>().startMatch(
+              format: _pendingFormat!,
+              playerCount: 3,
+            ),
           ),
           const SizedBox(height: 16),
           _FormatButton(
-            format: GameFormat.duelCommander,
-            color: Colors.teal.shade700,
+            title: AppStrings.fourPlayers,
+            color: Colors.blueGrey.shade700,
+            onPressed: () => context.read<MatchCubit>().startMatch(
+              format: _pendingFormat!,
+              playerCount: 4,
+            ),
+          ),
+          const SizedBox(height: 32),
+          TextButton.icon(
+            icon: const Icon(Icons.arrow_back, color: Colors.white),
+            label: const Text(
+              AppStrings.back,
+              style: TextStyle(color: Colors.white, fontSize: 18),
+            ),
+            onPressed: () => setState(() => _pendingFormat = null),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // --- NOVO: Método ajudante para desenhar os jogadores sem repetir código ---
+  Widget _buildPlayer(Player player, Color color, {bool inverted = false}) {
+    return Expanded(
+      child: PlayerBoard(
+        player: player,
+        backgroundColor: color,
+        inverted: inverted,
+        showCommanderDamage:
+            context.read<MatchCubit>().state.format?.hasCommanderDamage ??
+            false,
+        onLifeChanged: (amount) =>
+            context.read<MatchCubit>().updateLife(player.id, amount),
+        onPoisonChanged: (amount) =>
+            context.read<MatchCubit>().updatePoison(player.id, amount),
+      ),
+    );
+  }
+
+  // --- NOVO: Barra central extraída para ficar mais limpo ---
+  Widget _buildMiddleBar(BuildContext context) {
+    return Container(
+      height: 60,
+      color: Colors.grey.shade900,
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+        children: [
+          IconButton(
+            icon: const Icon(Icons.style, color: Colors.white, size: 30),
+            onPressed: () {
+              Navigator.of(context).popUntil((route) => route.isFirst);
+              context.read<MatchCubit>().changeFormat();
+            },
+          ),
+          IconButton(
+            icon: const Icon(Icons.casino, color: Colors.white, size: 30),
+            onPressed: () => _showDiceModal(context),
+          ),
+          IconButton(
+            icon: const Icon(Icons.refresh, color: Colors.white, size: 30),
+            onPressed: () {
+              Navigator.of(context).popUntil((route) => route.isFirst);
+              context.read<MatchCubit>().resetMatch();
+            },
           ),
         ],
       ),
@@ -89,6 +206,9 @@ class _MatchScreenState extends State<MatchScreen> {
       backgroundColor: Colors.black,
       body: BlocConsumer<MatchCubit, MatchState>(
         listener: (context, state) {
+          if (state.status == MatchStatus.initial && _pendingFormat != null) {
+            setState(() => _pendingFormat = null);
+          }
           if (state.status == MatchStatus.finished && state.loserId != null) {
             _showWinnerDialog(context, state.loserId!);
           }
@@ -102,97 +222,55 @@ class _MatchScreenState extends State<MatchScreen> {
             return const Center(child: CircularProgressIndicator());
           }
 
-          final p1 = state.players['player_1']!;
-          final p2 = state.players['player_2']!;
+          final p1 = state.players['player_1'];
+          final p2 = state.players['player_2'];
+          final p3 = state.players['player_3'];
+          final p4 = state.players['player_4'];
+
+          if (p1 == null || p2 == null) {
+            return const Center(child: CircularProgressIndicator());
+          }
+
+          final playerCount = state.players.length;
 
           return Column(
             children: [
-              // Top Half: Player 2
+              // LINHA DE CIMA (Sempre invertida para quem está do outro lado da mesa)
               Expanded(
-                child: PlayerBoard(
-                  player: p2,
-                  backgroundColor: Colors.red.shade800,
-                  inverted: true,
-                  showCommanderDamage:
-                      state.format?.hasCommanderDamage ?? false,
-                  onLifeChanged: (amount) =>
-                      context.read<MatchCubit>().updateLife('player_2', amount),
-                  onPoisonChanged: (amount) => context
-                      .read<MatchCubit>()
-                      .updatePoison('player_2', amount),
-                  onCommanderDamageChanged: (amount) =>
-                      context.read<MatchCubit>().updateCommanderDamage(
-                        targetPlayerId: 'player_2',
-                        opponentId: 'player_1',
-                        amount: amount,
-                      ),
-                ),
-              ),
-
-              // Middle Bar: Reset / Menu
-              Container(
-                height: 60,
-                color: Colors.grey.shade900,
                 child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                   children: [
-                    IconButton(
-                      icon: const Icon(
-                        Icons.style,
-                        color: Colors.white,
-                        size: 30,
+                    if (playerCount == 2)
+                      _buildPlayer(p2, Colors.red.shade800, inverted: true),
+                    if (playerCount == 3) ...[
+                      _buildPlayer(p2, Colors.red.shade800, inverted: true),
+                      _buildPlayer(p3!, Colors.green.shade800, inverted: true),
+                    ],
+                    if (playerCount == 4) ...[
+                      _buildPlayer(p3!, Colors.green.shade800, inverted: true),
+                      _buildPlayer(
+                        p4!,
+                        Colors.deepPurple.shade800,
+                        inverted: true,
                       ),
-                      onPressed: () {
-                        Navigator.of(
-                          context,
-                        ).popUntil((route) => route.isFirst);
-                        context.read<MatchCubit>().changeFormat();
-                      },
-                    ),
-                    IconButton(
-                      icon: const Icon(
-                        Icons.casino,
-                        color: Colors.white,
-                        size: 30,
-                      ),
-                      onPressed: () => _showDiceModal(context),
-                    ),
-                    IconButton(
-                      icon: const Icon(
-                        Icons.refresh,
-                        color: Colors.white,
-                        size: 30,
-                      ),
-                      onPressed: () {
-                        Navigator.of(
-                          context,
-                        ).popUntil((route) => route.isFirst);
-                        context.read<MatchCubit>().resetMatch();
-                      },
-                    ),
+                    ],
                   ],
                 ),
               ),
 
-              // Bottom Half: Player 1
+              // BARRA CENTRAL
+              _buildMiddleBar(context),
+
+              // LINHA DE BAIXO (De frente para o dono do celular)
               Expanded(
-                child: PlayerBoard(
-                  player: p1,
-                  backgroundColor: Colors.blue.shade800,
-                  showCommanderDamage:
-                      state.format?.hasCommanderDamage ?? false,
-                  onLifeChanged: (amount) =>
-                      context.read<MatchCubit>().updateLife('player_1', amount),
-                  onPoisonChanged: (amount) => context
-                      .read<MatchCubit>()
-                      .updatePoison('player_1', amount),
-                  onCommanderDamageChanged: (amount) =>
-                      context.read<MatchCubit>().updateCommanderDamage(
-                        targetPlayerId: 'player_1',
-                        opponentId:
-                            'player_2', // No 1v1, o oponente é sempre o 2
-                        amount: amount,
-                      ),
+                child: Row(
+                  children: [
+                    if (playerCount == 2 || playerCount == 3)
+                      _buildPlayer(p1, Colors.blue.shade800),
+                    if (playerCount == 4) ...[
+                      _buildPlayer(p1, Colors.blue.shade800),
+                      _buildPlayer(p2, Colors.red.shade800),
+                    ],
+                  ],
                 ),
               ),
             ],
@@ -203,12 +281,16 @@ class _MatchScreenState extends State<MatchScreen> {
   }
 }
 
-// O Botão de formato extraído para fora do State
 class _FormatButton extends StatelessWidget {
-  final GameFormat format;
+  final String title;
   final Color color;
+  final VoidCallback onPressed;
 
-  const _FormatButton({required this.format, required this.color});
+  const _FormatButton({
+    required this.title,
+    required this.color,
+    required this.onPressed,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -222,9 +304,9 @@ class _FormatButton extends StatelessWidget {
             borderRadius: BorderRadius.circular(30),
           ),
         ),
-        onPressed: () => context.read<MatchCubit>().startMatch(format),
+        onPressed: onPressed,
         child: Text(
-          format.displayName,
+          title,
           style: const TextStyle(
             fontSize: 20,
             fontWeight: FontWeight.bold,

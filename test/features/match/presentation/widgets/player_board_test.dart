@@ -34,7 +34,6 @@ void main() {
   Widget createWidgetUnderTest({
     required Function(int) onLifeChanged,
     required Function(int) onPoisonChanged,
-    required Function(int) onCommanderDamageChanged,
   }) {
     return MaterialApp(
       home: Scaffold(
@@ -46,7 +45,6 @@ void main() {
             showCommanderDamage: true,
             onLifeChanged: onLifeChanged,
             onPoisonChanged: onPoisonChanged,
-            onCommanderDamageChanged: onCommanderDamageChanged,
           ),
         ),
       ),
@@ -58,11 +56,7 @@ void main() {
       tester,
     ) async {
       await tester.pumpWidget(
-        createWidgetUnderTest(
-          onLifeChanged: (_) {},
-          onPoisonChanged: (_) {},
-          onCommanderDamageChanged: (_) {},
-        ),
+        createWidgetUnderTest(onLifeChanged: (_) {}, onPoisonChanged: (_) {}),
       );
 
       expect(find.text('40'), findsOneWidget);
@@ -79,7 +73,6 @@ void main() {
           createWidgetUnderTest(
             onLifeChanged: (amount) => registeredAmount = amount,
             onPoisonChanged: (_) {},
-            onCommanderDamageChanged: (_) {},
           ),
         );
 

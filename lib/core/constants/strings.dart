@@ -12,6 +12,11 @@ class AppStrings {
   static const commander = 'Commander';
   static const duelCommander = 'Duel Commander';
   static const tinyLeaders = 'Tiny Leaders';
+  static const selectPlayers = 'Número de Jogadores';
+  static const twoPlayers = '2 Jogadores';
+  static const threePlayers = '3 Jogadores';
+  static const fourPlayers = '4 Jogadores';
+  static const back = 'Voltar';
 
   // Novas strings para os Dados
   static const rollDice = 'Rolar Dados';
