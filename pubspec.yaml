@@ -3,7 +3,7 @@ description: "A new Flutter project."
 
 publish_to: "none" # Remove this line if you wish to publish to pub.dev
 
-version: 0.4.0+1
+version: 0.4.1+1
 
 environment:
   sdk: ^3.11.4
@@ -24,6 +24,13 @@ dev_dependencies:
   flutter_lints: ^6.0.0
   bloc_test: ^10.0.0
   mocktail: ^1.0.4
+  flutter_launcher_icons: ^0.14.4
+
+flutter_launcher_icons:
+  android: "launcher_icon"
+  ios: true
+  image_path: "assets/icon/wolfnir_logo.png"
+  min_sdk_android: 21 # deve combinar com o seu android/app/build.gradle
 
 flutter:
   uses-material-design: true

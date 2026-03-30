@@ -116,7 +116,7 @@ void main() {
     );
 
     blocTest<MatchCubit, MatchState>(
-      'should emit finished status and loserId when a player dies',
+      'should emit finished status and winnerId when all other players die',
       build: () {
         const deadPlayer = Player(id: 'player_1', life: 0);
         when(
@@ -137,7 +137,7 @@ void main() {
             'player_2': player2,
           },
           status: MatchStatus.finished,
-          loserId: 'player_1',
+          winnerId: 'player_2',
           format: GameFormat.commander,
         ),
       ],

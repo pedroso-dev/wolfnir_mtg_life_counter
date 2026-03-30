@@ -90,15 +90,18 @@ class MatchCubit extends Cubit<MatchState> {
     final newPlayers = Map<String, Player>.from(state.players);
     newPlayers[updatedPlayer.id] = updatedPlayer;
 
-    // The Cubit checks the rules automatically after any update
-    if (updatedPlayer.isDead) {
+    final activePlayers = newPlayers.values.where((p) => !p.isDead).toList();
+
+    if (activePlayers.length == 1 && state.players.length > 1) {
       emit(
         state.copyWith(
           players: newPlayers,
           status: MatchStatus.finished,
-          loserId: updatedPlayer.id,
+          winnerId: activePlayers.first.id,
         ),
       );
+    } else if (activePlayers.isEmpty) {
+      emit(state.copyWith(players: newPlayers, status: MatchStatus.finished));
     } else {
       emit(state.copyWith(players: newPlayers));
     }

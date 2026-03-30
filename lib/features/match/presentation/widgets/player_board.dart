@@ -70,68 +70,136 @@ class PlayerBoard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // 1. Verificamos se o jogador já perdeu (vida <= 0, etc)
+    final bool isDead = player.isDead;
+
     return RotatedBox(
       quarterTurns: inverted ? 2 : 0,
-      child: Container(
-        color: backgroundColor,
-        child: Stack(
-          children: [
-            Column(
+      // 2. Bloqueia toques e escurece se estiver morto
+      child: IgnorePointer(
+        ignoring: isDead,
+        child: Opacity(
+          opacity: isDead ? 0.3 : 1.0,
+          child: Container(
+            color: backgroundColor,
+            child: Stack(
               children: [
-                Expanded(
-                  child: GestureDetector(
-                    onTap: () => onLifeChanged(1),
-                    onLongPress: () => onLifeChanged(10),
-                    behavior: HitTestBehavior.opaque,
+                Column(
+                  children: [
+                    Expanded(
+                      child: GestureDetector(
+                        onTap: () => onLifeChanged(1),
+                        onLongPress: () => onLifeChanged(10),
+                        behavior: HitTestBehavior.opaque,
+                      ),
+                    ),
+                    Expanded(
+                      child: GestureDetector(
+                        onTap: () => onLifeChanged(-1),
+                        onLongPress: () => onLifeChanged(-10),
+                        behavior: HitTestBehavior.opaque,
+                      ),
+                    ),
+                  ],
+                ),
+                IgnorePointer(
+                  child: Center(
+                    child: Text(
+                      player.life.toString(),
+                      style: const TextStyle(
+                        fontSize: 120,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white,
+                        height: 1.0,
+                      ),
+                    ),
                   ),
                 ),
-                Expanded(
-                  child: GestureDetector(
-                    onTap: () => onLifeChanged(-1),
-                    onLongPress: () => onLifeChanged(-10),
-                    behavior: HitTestBehavior.opaque,
+                Positioned(
+                  bottom: 16,
+                  left: 12,
+                  right: 12,
+                  child: Wrap(
+                    alignment: WrapAlignment.center,
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: [
+                      // 1. BOTÃO FIXO DE COMANDANTE (Para abrir o modal e adicionar dano)
+                      if (showCommanderDamage)
+                        _ClickableBadge(
+                          icon: Icons.shield,
+                          value: 0, // Pode ser 0 ou a soma total, como preferir
+                          label:
+                              "CMD", // Adicionei um label opcional se quiser identificar
+                          onTap: () => _showCommanderModal(context),
+                        ),
+
+                      // 2. PÍLULAS DINÂMICAS (Mostram quem causou dano)
+                      if (showCommanderDamage)
+                        ...player.commanderDamageTaken.entries
+                            .where((entry) => entry.value > 0)
+                            .map(
+                              (entry) => _CommanderDamagePill(
+                                opponentId: entry.key,
+                                value: entry.value,
+                                onTap: () => _showCommanderModal(context),
+                              ),
+                            ),
+
+                      // 3. BADGE DE VENENO
+                      _ClickableBadge(
+                        icon: Icons.science,
+                        value: player.poisonCounters,
+                        onTap: () => _showPoisonModal(context),
+                      ),
+                    ],
                   ),
                 ),
               ],
             ),
-            IgnorePointer(
-              child: Center(
-                child: Text(
-                  player.life.toString(),
-                  style: const TextStyle(
-                    fontSize: 120,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.white,
-                    height: 1.0,
-                  ),
-                ),
-              ),
-            ),
-            Positioned(
-              bottom: 16,
-              left: 0,
-              right: 0,
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  if (showCommanderDamage)
-                    _ClickableBadge(
-                      icon: Icons.shield,
-                      value: player.commanderDamageTaken.values.fold(
-                        0,
-                        (sum, val) => sum + val,
-                      ),
-                      onTap: () => _showCommanderModal(context),
-                    ),
+          ),
+        ),
+      ),
+    );
+  }
+}
 
-                  if (showCommanderDamage) const SizedBox(width: 16),
+// O Badge antigo (usado para Veneno)
+class _ClickableBadge extends StatelessWidget {
+  final IconData icon;
+  final int value;
+  final String? label;
+  final VoidCallback onTap;
 
-                  _ClickableBadge(
-                    icon: Icons.science,
-                    value: player.poisonCounters,
-                    onTap: () => _showPoisonModal(context),
-                  ),
-                ],
+  const _ClickableBadge({
+    required this.icon,
+    required this.value,
+    this.label,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        decoration: BoxDecoration(
+          color: Colors.black.withValues(alpha: 0.6),
+          borderRadius: BorderRadius.circular(30),
+          border: Border.all(color: Colors.white24),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(icon, color: Colors.white, size: 18),
+            const SizedBox(width: 6),
+            Text(
+              label ?? value.toString(),
+              style: const TextStyle(
+                color: Colors.white,
+                fontWeight: FontWeight.bold,
+                fontSize: 16,
               ),
             ),
           ],
@@ -141,38 +209,48 @@ class PlayerBoard extends StatelessWidget {
   }
 }
 
-class _ClickableBadge extends StatelessWidget {
-  final IconData icon;
+// NOVO: Widget da Pílula de Comandante
+class _CommanderDamagePill extends StatelessWidget {
+  final String opponentId;
   final int value;
   final VoidCallback onTap;
 
-  const _ClickableBadge({
-    required this.icon,
+  const _CommanderDamagePill({
+    required this.opponentId,
     required this.value,
     required this.onTap,
   });
 
+  Color _getOpponentColor(String id) {
+    if (id == 'player_1') return Colors.blue.shade700;
+    if (id == 'player_2') return Colors.red.shade700;
+    if (id == 'player_3') return Colors.green.shade700;
+    return Colors.deepPurple.shade700;
+  }
+
   @override
   Widget build(BuildContext context) {
+    final color = _getOpponentColor(opponentId);
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
         decoration: BoxDecoration(
-          color: Colors.black.withValues(alpha: 0.6),
-          borderRadius: BorderRadius.circular(30),
-          border: Border.all(color: Colors.white24),
+          color: color.withValues(alpha: 0.8),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: Colors.white30),
         ),
         child: Row(
+          mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(icon, color: Colors.white, size: 20),
-            const SizedBox(width: 8),
+            const Icon(Icons.shield, color: Colors.white, size: 14),
+            const SizedBox(width: 4),
             Text(
               value.toString(),
               style: const TextStyle(
                 color: Colors.white,
                 fontWeight: FontWeight.bold,
-                fontSize: 20,
+                fontSize: 14,
               ),
             ),
           ],

@@ -16,7 +16,6 @@ class MatchScreen extends StatefulWidget {
 }
 
 class _MatchScreenState extends State<MatchScreen> {
-  // Variável para guardar o formato enquanto o usuário escolhe a quantidade de jogadores
   GameFormat? _pendingFormat;
 
   @override
@@ -24,15 +23,20 @@ class _MatchScreenState extends State<MatchScreen> {
     super.initState();
   }
 
-  void _showWinnerDialog(BuildContext context, String loserId) {
+  void _showWinnerDialog(BuildContext context, String winnerId) {
     final matchCubit = context.read<MatchCubit>();
+
+    final formattedWinner = winnerId.replaceAll('_', ' ').toUpperCase();
 
     showDialog(
       context: context,
       barrierDismissible: false,
       builder: (dialogContext) => AlertDialog(
         title: const Text(AppStrings.matchFinished),
-        content: Text('$loserId ${AppStrings.playerLost}'),
+        content: Text(
+          '$formattedWinner VENCEU A PARTIDA! 🎉',
+          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
+        ),
         actions: [
           TextButton(
             onPressed: () {
@@ -47,17 +51,21 @@ class _MatchScreenState extends State<MatchScreen> {
   }
 
   void _showDiceModal(BuildContext context) {
+    // 1. Capturamos a instância do Cubit que já existe nesta tela
+    final matchCubit = context.read<MatchCubit>();
+
     showModalBottomSheet(
       context: context,
       backgroundColor: Colors.transparent,
-      builder: (context) => const DiceModal(),
+      builder: (_) => BlocProvider.value(
+        // 2. Passamos a instância existente para dentro do Modal
+        value: matchCubit,
+        child: const DiceModal(),
+      ),
     );
   }
 
-  // ... (mantenha os imports, initState, _showWinnerDialog e _showDiceModal)
-
   Widget _buildSetupScreen(BuildContext context) {
-    // PASSO 1: Escolher o Formato
     if (_pendingFormat == null) {
       return Center(
         child: Column(
@@ -97,7 +105,6 @@ class _MatchScreenState extends State<MatchScreen> {
       );
     }
 
-    // PASSO 2: Escolher Quantos Jogadores
     return Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
@@ -151,7 +158,6 @@ class _MatchScreenState extends State<MatchScreen> {
     );
   }
 
-  // --- NOVO: Método ajudante para desenhar os jogadores sem repetir código ---
   Widget _buildPlayer(Player player, Color color, {bool inverted = false}) {
     return Expanded(
       child: PlayerBoard(
@@ -169,7 +175,6 @@ class _MatchScreenState extends State<MatchScreen> {
     );
   }
 
-  // --- NOVO: Barra central extraída para ficar mais limpo ---
   Widget _buildMiddleBar(BuildContext context) {
     return Container(
       height: 60,
@@ -209,8 +214,8 @@ class _MatchScreenState extends State<MatchScreen> {
           if (state.status == MatchStatus.initial && _pendingFormat != null) {
             setState(() => _pendingFormat = null);
           }
-          if (state.status == MatchStatus.finished && state.loserId != null) {
-            _showWinnerDialog(context, state.loserId!);
+          if (state.status == MatchStatus.finished && state.winnerId != null) {
+            _showWinnerDialog(context, state.winnerId!);
           }
         },
         builder: (context, state) {
@@ -235,7 +240,6 @@ class _MatchScreenState extends State<MatchScreen> {
 
           return Column(
             children: [
-              // LINHA DE CIMA (Sempre invertida para quem está do outro lado da mesa)
               Expanded(
                 child: Row(
                   children: [
@@ -257,10 +261,8 @@ class _MatchScreenState extends State<MatchScreen> {
                 ),
               ),
 
-              // BARRA CENTRAL
               _buildMiddleBar(context),
 
-              // LINHA DE BAIXO (De frente para o dono do celular)
               Expanded(
                 child: Row(
                   children: [

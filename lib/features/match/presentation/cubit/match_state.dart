@@ -5,33 +5,32 @@ import '../../domain/enums/game_format.dart';
 enum MatchStatus { initial, playing, finished }
 
 class MatchState extends Equatable {
-  // Using a Map makes it very fast (O(1)) to find and update a specific player
   final Map<String, Player> players;
   final MatchStatus status;
-  final String? loserId;
-  final GameFormat? format; // Adicionado aqui
+  final GameFormat? format;
+  final String? winnerId;
 
   const MatchState({
     required this.players,
     this.status = MatchStatus.initial,
-    this.loserId,
-    this.format, // Adicionado aqui
+    this.format,
+    this.winnerId,
   });
 
   MatchState copyWith({
     Map<String, Player>? players,
     MatchStatus? status,
-    String? loserId,
-    GameFormat? format, // Adicionado aqui
+    GameFormat? format,
+    String? winnerId,
   }) {
     return MatchState(
       players: players ?? this.players,
       status: status ?? this.status,
-      loserId: loserId ?? this.loserId,
-      format: format ?? this.format, // Adicionado aqui
+      format: format ?? this.format,
+      winnerId: winnerId ?? this.winnerId,
     );
   }
 
   @override
-  List<Object?> get props => [players, status, loserId, format];
+  List<Object?> get props => [players, status, format, winnerId];
 }
