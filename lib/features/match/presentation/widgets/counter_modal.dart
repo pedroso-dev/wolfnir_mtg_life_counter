@@ -38,8 +38,8 @@ class CounterModal extends StatelessWidget {
             children: [
               _buildButton(
                 Icons.remove,
-                () => onValueChanged(-1),
                 Colors.redAccent,
+                () => onValueChanged(-1),
               ),
               Text(
                 currentValue.toString(),
@@ -51,8 +51,8 @@ class CounterModal extends StatelessWidget {
               ),
               _buildButton(
                 Icons.add,
-                () => onValueChanged(1),
                 Colors.greenAccent,
+                () => onValueChanged(1),
               ),
             ],
           ),
@@ -62,14 +62,14 @@ class CounterModal extends StatelessWidget {
     );
   }
 
-  Widget _buildButton(IconData icon, VoidCallback onPressed, Color color) {
+  Widget _buildButton(IconData icon, Color color, VoidCallback onPressed) {
     return InkWell(
       onTap: onPressed,
-      borderRadius: BorderRadius.circular(40),
+      borderRadius: BorderRadius.circular(50),
       child: Container(
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          color: color.withOpacity(0.2),
+          color: color.withValues(alpha: 0.2),
           shape: BoxShape.circle,
           border: Border.all(color: color, width: 2),
         ),
