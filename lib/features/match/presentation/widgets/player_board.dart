@@ -1,72 +1,144 @@
 import 'package:flutter/material.dart';
 import '../../domain/entities/player.dart';
 import '../../../../core/constants/strings.dart';
+import 'counter_modal.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import '../cubit/match_cubit.dart';
+import '../cubit/match_state.dart';
 
 class PlayerBoard extends StatelessWidget {
   final Player player;
   final Color backgroundColor;
   final bool inverted;
   final Function(int) onLifeChanged;
-  final Function(int)? onCommanderDamageChanged;
-  final Function(int)? onPoisonChanged;
+  final Function(int) onPoisonChanged;
+  // Para a v1 (1v1), vamos simplificar e assumir que o dano vem sempre do único oponente
+  final Function(int) onCommanderDamageChanged;
 
   const PlayerBoard({
     super.key,
     required this.player,
     required this.backgroundColor,
     required this.onLifeChanged,
-    this.onCommanderDamageChanged,
-    this.onPoisonChanged,
+    required this.onPoisonChanged,
+    required this.onCommanderDamageChanged,
     this.inverted = false,
   });
 
+  void _showCounterModal(BuildContext context, String title, bool isPoison) {
+    // 1. Pegamos a referência exata do Cubit ANTES de abrir o modal
+    final matchCubit = context.read<MatchCubit>();
+
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      isScrollControlled: true,
+      builder: (bottomSheetContext) {
+        // 2. Injetamos o Cubit existente na nova camada do Modal usando .value
+        return BlocProvider.value(
+          value: matchCubit,
+          child: BlocBuilder<MatchCubit, MatchState>(
+            builder: (context, state) {
+              final currentPlayer = state.players[player.id];
+              if (currentPlayer == null) return const SizedBox.shrink();
+
+              final currentValue = isPoison
+                  ? currentPlayer.poisonCounters
+                  : currentPlayer.commanderDamageTaken.values.fold(
+                      0,
+                      (sum, val) => sum + val,
+                    );
+
+              return RotatedBox(
+                quarterTurns: inverted ? 2 : 0,
+                child: CounterModal(
+                  title: title,
+                  currentValue: currentValue,
+                  onValueChanged: (amount) {
+                    if (isPoison) {
+                      onPoisonChanged(amount);
+                    } else {
+                      onCommanderDamageChanged(amount);
+                    }
+                  },
+                ),
+              );
+            },
+          ),
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
-    // If inverted (Player 2), we rotate the entire widget 180 degrees
     return RotatedBox(
       quarterTurns: inverted ? 2 : 0,
       child: Container(
         color: backgroundColor,
         child: Stack(
           children: [
-            // Touch Areas for Life (+ and -)
             Column(
               children: [
                 Expanded(
                   child: GestureDetector(
                     onTap: () => onLifeChanged(1),
+                    onLongPress: () => onLifeChanged(10),
                     behavior: HitTestBehavior.opaque,
                   ),
                 ),
                 Expanded(
                   child: GestureDetector(
                     onTap: () => onLifeChanged(-1),
+                    onLongPress: () => onLifeChanged(-10),
                     behavior: HitTestBehavior.opaque,
                   ),
                 ),
               ],
             ),
-
-            // Visual Data (Life, Poison, Commander Damage)
             IgnorePointer(
-              // Prevents text from blocking the touch areas
               child: Center(
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Text(
-                      player.life.toString(),
-                      style: const TextStyle(
-                        fontSize: 120,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.white,
-                        height: 1.0,
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-                    _buildExtraCounters(),
-                  ],
+                child: Text(
+                  player.life.toString(),
+                  style: const TextStyle(
+                    fontSize: 120,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.white,
+                    height: 1.0,
+                  ),
                 ),
+              ),
+            ),
+            // Posicionamos os botões extras na parte inferior (perto do centro da mesa)
+            Positioned(
+              bottom: 16,
+              left: 0,
+              right: 0,
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  _ClickableBadge(
+                    icon: Icons.shield,
+                    value: player.commanderDamageTaken.values.fold(
+                      0,
+                      (sum, val) => sum + val,
+                    ),
+                    // Passamos apenas: context, Título, isPoison (false)
+                    onTap: () => _showCounterModal(
+                      context,
+                      AppStrings.commanderDamage,
+                      false,
+                    ),
+                  ),
+                  const SizedBox(width: 16),
+                  _ClickableBadge(
+                    icon: Icons.science,
+                    value: player.poisonCounters,
+                    // Passamos apenas: context, Título, isPoison (true)
+                    onTap: () =>
+                        _showCounterModal(context, AppStrings.poison, true),
+                  ),
+                ],
               ),
             ),
           ],
@@ -74,67 +146,44 @@ class PlayerBoard extends StatelessWidget {
       ),
     );
   }
-
-  // MVP: Showing extra counters simply. We can add interactive buttons here later.
-  Widget _buildExtraCounters() {
-    final totalCommanderDamage = player.commanderDamageTaken.values.fold(
-      0,
-      (sum, val) => sum + val,
-    );
-
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: [
-        if (totalCommanderDamage > 0)
-          _CounterBadge(
-            icon: Icons.shield,
-            value: totalCommanderDamage,
-            label: AppStrings.commanderDamage,
-          ),
-        const SizedBox(width: 16),
-        if (player.poisonCounters > 0)
-          _CounterBadge(
-            icon: Icons.science,
-            value: player.poisonCounters,
-            label: AppStrings.poison,
-          ),
-      ],
-    );
-  }
 }
 
-class _CounterBadge extends StatelessWidget {
+class _ClickableBadge extends StatelessWidget {
   final IconData icon;
   final int value;
-  final String label;
+  final VoidCallback onTap;
 
-  const _CounterBadge({
+  const _ClickableBadge({
     required this.icon,
     required this.value,
-    required this.label,
+    required this.onTap,
   });
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-      decoration: BoxDecoration(
-        color: Colors.black.withOpacity(0.5),
-        borderRadius: BorderRadius.circular(20),
-      ),
-      child: Row(
-        children: [
-          Icon(icon, color: Colors.white, size: 16),
-          const SizedBox(width: 4),
-          Text(
-            value.toString(),
-            style: const TextStyle(
-              color: Colors.white,
-              fontWeight: FontWeight.bold,
-              fontSize: 16,
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        decoration: BoxDecoration(
+          color: Colors.black.withOpacity(0.6),
+          borderRadius: BorderRadius.circular(30),
+          border: Border.all(color: Colors.white24),
+        ),
+        child: Row(
+          children: [
+            Icon(icon, color: Colors.white, size: 20),
+            const SizedBox(width: 8),
+            Text(
+              value.toString(),
+              style: const TextStyle(
+                color: Colors.white,
+                fontWeight: FontWeight.bold,
+                fontSize: 20,
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }

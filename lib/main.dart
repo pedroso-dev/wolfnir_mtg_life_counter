@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:wakelock_plus/wakelock_plus.dart';
 import 'core/constants/strings.dart';
 import 'features/match/domain/usecases/update_commander_damage_usecase.dart';
 import 'features/match/domain/usecases/update_life_usecase.dart';
@@ -11,9 +12,9 @@ import 'features/match/presentation/pages/match_screen.dart';
 void main() {
   // Ensures Flutter bindings are initialized before hiding the status bar
   WidgetsFlutterBinding.ensureInitialized();
-  SystemChrome.setEnabledSystemUIMode(
-    SystemUiMode.immersiveSticky,
-  ); // Fullscreen mode
+  SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky);
+
+  WakelockPlus.enable();
 
   runApp(const MTGCounterApp());
 }

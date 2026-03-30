@@ -4,6 +4,7 @@ import '../../../../core/constants/strings.dart';
 import '../cubit/match_cubit.dart';
 import '../cubit/match_state.dart';
 import '../widgets/player_board.dart';
+import '../widgets/dice_modal.dart';
 
 class MatchScreen extends StatefulWidget {
   const MatchScreen({super.key});
@@ -21,22 +22,35 @@ class _MatchScreenState extends State<MatchScreen> {
   }
 
   void _showWinnerDialog(BuildContext context, String loserId) {
+    final matchCubit = context.read<MatchCubit>();
+
     showDialog(
       context: context,
       barrierDismissible: false,
-      builder: (context) => AlertDialog(
+      builder: (dialogContext) => AlertDialog(
         title: const Text(AppStrings.matchFinished),
         content: Text('$loserId ${AppStrings.playerLost}'),
         actions: [
           TextButton(
             onPressed: () {
-              Navigator.of(context).pop();
-              context.read<MatchCubit>().resetMatch();
+              // Em vez de fechar só o alerta com .pop(), limpamos TUDO (Alerta e Modais)
+              Navigator.of(context).popUntil((route) => route.isFirst);
+
+              // E então reiniciamos a partida
+              matchCubit.resetMatch();
             },
             child: const Text(AppStrings.resetMatch),
           ),
         ],
       ),
+    );
+  }
+
+  void _showDiceModal(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (context) => const DiceModal(),
     );
   }
 
@@ -68,6 +82,15 @@ class _MatchScreenState extends State<MatchScreen> {
                   inverted: true,
                   onLifeChanged: (amount) =>
                       context.read<MatchCubit>().updateLife('player_2', amount),
+                  onPoisonChanged: (amount) => context
+                      .read<MatchCubit>()
+                      .updatePoison('player_2', amount),
+                  onCommanderDamageChanged: (amount) =>
+                      context.read<MatchCubit>().updateCommanderDamage(
+                        targetPlayerId: 'player_2',
+                        opponentId: 'player_1',
+                        amount: amount,
+                      ),
                 ),
               ),
 
@@ -76,15 +99,28 @@ class _MatchScreenState extends State<MatchScreen> {
                 height: 60,
                 color: Colors.grey.shade900,
                 child: Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
+                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                   children: [
+                    IconButton(
+                      icon: const Icon(
+                        Icons.casino,
+                        color: Colors.white,
+                        size: 32,
+                      ),
+                      onPressed: () => _showDiceModal(context),
+                    ),
                     IconButton(
                       icon: const Icon(
                         Icons.refresh,
                         color: Colors.white,
                         size: 32,
                       ),
-                      onPressed: () => context.read<MatchCubit>().resetMatch(),
+                      onPressed: () {
+                        Navigator.of(
+                          context,
+                        ).popUntil((route) => route.isFirst);
+                        context.read<MatchCubit>().resetMatch();
+                      },
                     ),
                   ],
                 ),
@@ -97,6 +133,16 @@ class _MatchScreenState extends State<MatchScreen> {
                   backgroundColor: Colors.blue.shade800,
                   onLifeChanged: (amount) =>
                       context.read<MatchCubit>().updateLife('player_1', amount),
+                  onPoisonChanged: (amount) => context
+                      .read<MatchCubit>()
+                      .updatePoison('player_1', amount),
+                  onCommanderDamageChanged: (amount) =>
+                      context.read<MatchCubit>().updateCommanderDamage(
+                        targetPlayerId: 'player_1',
+                        opponentId:
+                            'player_2', // No 1v1, o oponente é sempre o 2
+                        amount: amount,
+                      ),
                 ),
               ),
             ],
