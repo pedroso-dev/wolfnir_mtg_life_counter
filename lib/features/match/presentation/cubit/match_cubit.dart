@@ -1,4 +1,5 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:wolfnir_mtg_life_counter/features/match/domain/enums/game_format.dart';
 import '../../domain/entities/player.dart';
 import '../../domain/usecases/update_life_usecase.dart';
 import '../../domain/usecases/update_poison_usecase.dart';
@@ -19,15 +20,16 @@ class MatchCubit extends Cubit<MatchState> {
        _updateCommanderDamage = updateCommanderDamage,
        super(const MatchState(players: {}));
 
-  void startMatch() {
+  void startMatch(GameFormat format) {
     // For the MVP, we start a standard 1v1 Commander match
-    const p1 = Player(id: 'player_1');
-    const p2 = Player(id: 'player_2');
+    final p1 = Player(id: 'player_1', life: format.startingLife);
+    final p2 = Player(id: 'player_2', life: format.startingLife);
 
     emit(
       MatchState(
         players: {'player_1': p1, 'player_2': p2},
         status: MatchStatus.playing,
+        format: format,
       ),
     );
   }
@@ -71,7 +73,13 @@ class MatchCubit extends Cubit<MatchState> {
   }
 
   void resetMatch() {
-    startMatch();
+    if (state.format != null) {
+      startMatch(state.format!);
+    }
+  }
+
+  void changeFormat() {
+    emit(const MatchState(players: {}));
   }
 
   void _emitUpdatedPlayer(Player updatedPlayer) {

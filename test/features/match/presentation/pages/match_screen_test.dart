@@ -8,6 +8,8 @@ import 'package:wolfnir_mtg_life_counter/features/match/presentation/cubit/match
 import 'package:wolfnir_mtg_life_counter/features/match/presentation/cubit/match_state.dart';
 import 'package:wolfnir_mtg_life_counter/features/match/presentation/pages/match_screen.dart';
 import 'package:wolfnir_mtg_life_counter/features/match/presentation/widgets/player_board.dart';
+import 'package:wolfnir_mtg_life_counter/features/match/domain/enums/game_format.dart';
+import 'package:wolfnir_mtg_life_counter/core/constants/strings.dart';
 
 class MockMatchCubit extends MockCubit<MatchState> implements MatchCubit {}
 
@@ -28,7 +30,7 @@ void main() {
   }
 
   group('MatchScreen Widget |', () {
-    testWidgets('should show loading indicator when state is initial', (
+    testWidgets('should show format selection screen when state is initial', (
       tester,
     ) async {
       when(
@@ -37,7 +39,9 @@ void main() {
 
       await tester.pumpWidget(createWidgetUnderTest());
 
-      expect(find.byType(CircularProgressIndicator), findsOneWidget);
+      expect(find.text(AppStrings.selectFormat), findsOneWidget);
+      expect(find.text(AppStrings.commander), findsOneWidget);
+      expect(find.text(AppStrings.tinyLeaders), findsOneWidget);
     });
 
     testWidgets('should render 2 PlayerBoards and middle bar when playing', (
@@ -50,6 +54,7 @@ void main() {
         const MatchState(
           players: {'player_1': p1, 'player_2': p2},
           status: MatchStatus.playing,
+          format: GameFormat.commander,
         ),
       );
 

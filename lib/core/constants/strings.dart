@@ -8,6 +8,10 @@ class AppStrings {
   static const life = 'Vida';
   static const player1 = 'Jogador 1';
   static const player2 = 'Jogador 2';
+  static const selectFormat = 'Selecione o Formato';
+  static const commander = 'Commander';
+  static const duelCommander = 'Duel Commander';
+  static const tinyLeaders = 'Tiny Leaders';
 
   // Novas strings para os Dados
   static const rollDice = 'Rolar Dados';

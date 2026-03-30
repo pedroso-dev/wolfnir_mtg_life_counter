@@ -5,6 +5,7 @@ import '../cubit/match_cubit.dart';
 import '../cubit/match_state.dart';
 import '../widgets/player_board.dart';
 import '../widgets/dice_modal.dart';
+import '../../domain/enums/game_format.dart';
 
 class MatchScreen extends StatefulWidget {
   const MatchScreen({super.key});
@@ -17,8 +18,6 @@ class _MatchScreenState extends State<MatchScreen> {
   @override
   void initState() {
     super.initState();
-    // Start the match when the screen loads
-    context.read<MatchCubit>().startMatch();
   }
 
   void _showWinnerDialog(BuildContext context, String loserId) {
@@ -52,6 +51,39 @@ class _MatchScreenState extends State<MatchScreen> {
       backgroundColor: Colors.transparent,
       builder: (context) => const DiceModal(),
     );
+  } // <-- A chave que faltava para fechar o modal estava aqui!
+
+  Widget _buildSetupScreen(BuildContext context) {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          const Text(
+            AppStrings.selectFormat,
+            style: TextStyle(
+              fontSize: 32,
+              fontWeight: FontWeight.bold,
+              color: Colors.white,
+            ),
+          ),
+          const SizedBox(height: 48),
+          _FormatButton(
+            format: GameFormat.commander,
+            color: Colors.purple.shade700,
+          ),
+          const SizedBox(height: 16),
+          _FormatButton(
+            format: GameFormat.tinyLeaders,
+            color: Colors.orange.shade700,
+          ),
+          const SizedBox(height: 16),
+          _FormatButton(
+            format: GameFormat.duelCommander,
+            color: Colors.teal.shade700,
+          ),
+        ],
+      ),
+    );
   }
 
   @override
@@ -65,7 +97,11 @@ class _MatchScreenState extends State<MatchScreen> {
           }
         },
         builder: (context, state) {
-          if (state.status == MatchStatus.initial || state.players.isEmpty) {
+          if (state.status == MatchStatus.initial) {
+            return _buildSetupScreen(context);
+          }
+
+          if (state.players.isEmpty) {
             return const Center(child: CircularProgressIndicator());
           }
 
@@ -148,6 +184,39 @@ class _MatchScreenState extends State<MatchScreen> {
             ],
           );
         },
+      ),
+    );
+  }
+}
+
+// O Botão de formato extraído para fora do State
+class _FormatButton extends StatelessWidget {
+  final GameFormat format;
+  final Color color;
+
+  const _FormatButton({required this.format, required this.color});
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      width: 250,
+      height: 60,
+      child: ElevatedButton(
+        style: ElevatedButton.styleFrom(
+          backgroundColor: color,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(30),
+          ),
+        ),
+        onPressed: () => context.read<MatchCubit>().startMatch(format),
+        child: Text(
+          format.displayName,
+          style: const TextStyle(
+            fontSize: 20,
+            fontWeight: FontWeight.bold,
+            color: Colors.white,
+          ),
+        ),
       ),
     );
   }
